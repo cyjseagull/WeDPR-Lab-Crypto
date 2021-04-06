@@ -94,6 +94,9 @@ impl WedprSm2p256v1 {
         };
         let signature =
             SM2_CTX.sign(&msg_hash.as_ref(), &secret_key, &public_key_point);
+        if signature == sm2Signature::default() {
+            return Err(WedprError::FormatError);
+        }
         Ok(signature.bytes_encode().to_vec())
     }
 
@@ -109,6 +112,9 @@ impl WedprSm2p256v1 {
             },
         };
         let public_key = SM2_CTX.pk_from_sk(&secret_key);
+        if public_key.is_zero() {
+            return Err(WedprError::FormatError);
+        }
         Ok(SM2_CTX.serialize_pubkey(&public_key, false))
     }
 
@@ -167,5 +173,8 @@ mod tests {
             true,
             sm2_sign.verify(&public_key, &msg_hash.to_vec(), &signature_fast)
         );
+        let empty_sk = vec![0u8; 32];
+        let derive_pk = sm2_sign.derive_public_key(&empty_sk).unwrap_err();
+        assert_eq!(derive_pk, WedprError::FormatError);
     }
 }
